@@ -101,6 +101,21 @@ jobs:
           name: gestiontareas-jar
           path: target
 
+      - name: Verificar autenticacion Nexus
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NEXUS_SNAPSHOTS_URL: ${{ vars.NEXUS_SNAPSHOTS_URL }}
+        run: |
+          curl -f -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+            -I "$NEXUS_SNAPSHOTS_URL"
+
+      - name: Verificar server de Maven
+        run: |
+          test -f "$HOME/.m2/settings.xml"
+          grep -Eq '<id>[[:space:]]*nexus-snapshots[[:space:]]*</id>' "$HOME/.m2/settings.xml"
+          echo "settings.xml contiene el server nexus-snapshots"
+
       - name: Publicar JAR en Nexus
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
