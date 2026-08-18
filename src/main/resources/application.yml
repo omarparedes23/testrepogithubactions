@@ -1,0 +1,82 @@
+server:
+  port: 8080
+  # Permite que Spring lea X-Forwarded-Proto / X-Forwarded-Host / X-Forwarded-Port
+  # enviados por proxies (Cloud Shell, Nginx, Ingress, etc.) y arme las URLs
+  # (incluidas las de Swagger) con el scheme/host/puerto reales, no los internos.
+  forward-headers-strategy: framework
+spring:
+  application:
+    name: gestion-tareas
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+  datasource:
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+    url:      jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?createDatabaseIfNotExist=true
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    database: mysql
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.MySQL8Dialect}
+    properties:
+      hibernate:
+        format_sql: true
+        boot:
+          allow_jdbc_metadata_access: false
+    show-sql: true
+  sql:
+    init:
+      mode: never
+security:
+  jwt:
+    key:
+      private: ${JWT_PRIVATE_KEY}
+    user:
+      generator: ${JWT_ISSUER:AUTH.JWT-BACKEND}
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_S3_REGION:us-east-1}
+    presign-duration-minutes: ${AWS_S3_PRESIGN_MINUTES:15}
+app:
+  data-seed:
+    enabled: ${APP_DATA_SEED_ENABLED:false}
+  cors:
+    # Orígenes permitidos, separados por coma. Admite patrones con '*'.
+    # Se agregan por defecto localhost (Angular/React dev server) y los
+    # dominios de Web Preview de Google Cloud Shell.
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost,http://localhost:4200,https://*.cloudshell.dev}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_SHOW_DETAILS:when-authorized}
+  info:
+    env:
+      enabled: true
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+info:
+  app:
+    name: ${spring.application.name}
+    description: Api para control y gestion de tareas
+    version: 0.0.2-SNAPSHOT
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: DEBUG
+        type: TRACE
+      springframework:
+        security: TRACE

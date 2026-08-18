@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gestion-tareas
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:gestiontareas;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+  sql:
+    init:
+      mode: never
+
+security:
+  jwt:
+    key:
+      private: test-only-secret-key-not-for-production-0123456789
+    user:
+      generator: AUTH.JWT-BACKEND-TEST
+
+aws:
+  s3:
+    bucket: test-bucket
+    region: us-east-1
+    presign-duration-minutes: 15
+
+app:
+  data-seed:
+    enabled: false
+
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: WARN
+      springframework:
+        security: WARN

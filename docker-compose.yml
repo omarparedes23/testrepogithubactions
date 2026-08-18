@@ -1,0 +1,51 @@
+services:
+  gestion-tareas:
+    container_name: gestion-tareas
+    image: gestion-tareas:1.0.0
+    restart: always
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    links:
+      - mysql-db
+    ports:
+      - ${PORT_EXPOSE_SPRING}:8080
+    environment:
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_S3_REGION: ${AWS_S3_REGION}
+      APP_DATA_SEED_ENABLED: ${APP_DATA_SEED_ENABLED}
+    networks:
+      - gestion-tareas-net
+
+  mysql-db:
+    container_name: mysql-db-gestion-tareas
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: ${DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      USER_MYSQL: ${USER_MYSQL}
+      HOST_MYSQL: ${HOST_MYSQL}
+    ports:
+      - ${PORT_EXPOSE_MYSQL}:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "${HOST_MYSQL}", "-u", "${USER_MYSQL}", "-p${DATABASE_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gestion-tareas-net
+
+networks:
+  gestion-tareas-net:
