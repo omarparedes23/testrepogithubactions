@@ -1,7 +1,6 @@
 name: Artifact 
 on:
-  push:
-    branches: [feature]
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest

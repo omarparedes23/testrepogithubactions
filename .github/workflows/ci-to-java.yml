@@ -1,7 +1,6 @@
 name: CI to java
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
     
 jobs:
   build:

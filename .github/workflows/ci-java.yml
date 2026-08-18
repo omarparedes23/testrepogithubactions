@@ -1,7 +1,6 @@
 name: CI
 on:
-  push:
-    branches: [develop]
+  workflow_dispatch:
 
 env:
   NOMBRE_DEL_REPO: mi_primer_repo_con_actions
