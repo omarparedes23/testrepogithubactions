@@ -1,71 +1,126 @@
-name: CI to java
+name: CI/CD Develop - Maven y Nexus
+
 on:
   push:
     branches: [develop]
   pull_request:
-    branches: [develop]    
-    
+    branches: [develop]
+
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: Build
+    name: Compilar
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone repo workspace actions
-        uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: download actions java
-        uses: actions/setup-java@v5
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
           distribution: temurin
+          java-version: '21'
+          cache: maven
 
       - name: Compilar Java
-        run: mvn -B clean compile
-
-      - name: compartir compilacion
-        uses: actions/upload-artifact@v7
-        with:
-          name: compilacion-and-generate-artifact
-          path: target/
+        run: |
+          chmod +x mvnw
+          ./mvnw -B compile
 
   test:
-    name: Pruebas unitarias
+    name: Ejecutar pruebas
     needs: build
     runs-on: ubuntu-latest
+
     steps:
-      - name: Clone repo workspace actions
-        uses: actions/checkout@v7
-        
-      - name: download actions java
-        uses: actions/setup-java@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
           distribution: temurin
-      - name: Restaurar binario compilado en build
-        uses: actions/download-artifact@v7
-        with:
-          name: compilacion-and-generate-artifact
-          path: target/
+          java-version: '21'
+          cache: maven
+
       - name: Ejecutar pruebas unitarias
-        run: mvn -B test
+        run: |
+          chmod +x mvnw
+          ./mvnw -B test
+
   package:
-    name: Empaquetar
+    name: Generar JAR
     needs: test
     runs-on: ubuntu-latest
+
     steps:
-      - name: Clone repo workspace actions
-        uses: actions/checkout@v7
-        
-      - name: download actions java
-        uses: actions/setup-java@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
           distribution: temurin
-      - name: Restaurar binario compilado en build
-        uses: actions/download-artifact@v7
+          java-version: '21'
+          cache: maven
+
+      - name: Generar JAR
+        run: |
+          chmod +x mvnw
+          ./mvnw -B clean package -DskipTests
+
+      - name: Subir únicamente el JAR
+        uses: actions/upload-artifact@v4
         with:
-          name: compilacion-and-generate-artifact
-          path: target/
-      - name: Ejecutar pruebas unitarias
-        run: mvn clean package -DskipTests
+          name: gestiontareas-jar
+          path: target/gestiontareas-0.0.2-SNAPSHOT.jar
+          if-no-files-found: error
+
+  publish-nexus:
+    name: Publicar JAR en Nexus
+    needs: package
+    if: github.event_name == 'push'
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Java y credenciales Maven
+        uses: actions/setup-java@v4
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        with:
+          distribution: temurin
+          java-version: '21'
+          server-id: nexus-snapshots
+          server-username: NEXUS_USERNAME
+          server-password: NEXUS_PASSWORD
+
+      - name: Descargar JAR generado
+        uses: actions/download-artifact@v4
+        with:
+          name: gestiontareas-jar
+          path: target
+
+      - name: Publicar JAR en Nexus
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NEXUS_SNAPSHOTS_URL: ${{ vars.NEXUS_SNAPSHOTS_URL }}
+        run: |
+          chmod +x mvnw
+          ./mvnw -B org.apache.maven.plugins:maven-deploy-plugin:3.1.4:deploy-file \
+            -Dfile=target/gestiontareas-0.0.2-SNAPSHOT.jar \
+            -DpomFile=pom.xml \
+            -DgroupId=gestiontareas.com \
+            -DartifactId=gestiontareas \
+            -Dversion=0.0.2-SNAPSHOT \
+            -Dpackaging=jar \
+            -DrepositoryId=nexus-snapshots \
+            -Durl="$NEXUS_SNAPSHOTS_URL" \
+            -DgeneratePom=false
