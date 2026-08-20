@@ -1,134 +1,114 @@
-name: CI/CD Develop - Maven y Nexus
-
+name: CI-DEV-JAVA
 on:
   push:
-    branches: [feature]
+    branches: 
+      - feature
+
   pull_request:
-    branches: [feature]
-
-permissions:
-  contents: read
-
+    branches:
+      - feature
+    
 jobs:
   build:
-    name: Compilar
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Clone repo workspace actions
+        uses: actions/checkout@v7
 
-      - name: Configurar Java 21
+      - name: download actions java
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
           java-version: '21'
-          cache: maven
+          distribution: temurin
+          cache: 'maven'
 
       - name: Compilar Java
-        run: mvn -B compile
+        run: mvn -B clean compile
 
       - name: compartir compilacion
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: compilacion-de-clases
           path: target/
-          retention-days: 1        
+          retention-days: 1
 
   test:
-    name: Ejecutar pruebas
+    name: Pruebas unitarias
     needs: build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configurar Java 21
+      - name: Clone repo workspace actions
+        uses: actions/checkout@v7
+        
+      - name: download actions java
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
           java-version: '21'
-          cache: maven
+          distribution: temurin
+          cache: 'maven'
 
       - name: Restaurar binario compilado en build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: compilacion-de-clases
-          path: target/          
-
+          path: target/
       - name: Ejecutar pruebas unitarias
         run: mvn -B test
-
+      
       - name: Guardar resultados de pruebas unitarias
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: resultados-pruebas-unitarias
           path: target/
-          retention-days: 1        
-
+          retention-days: 1
+  
   package:
-    name: Generar JAR
+    name: Empaquetar codigo
     needs: test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configurar Java 21
+      - name: Clone repo workspace actions
+        uses: actions/checkout@v7
+      - name: download actions java
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
           java-version: '21'
-          cache: maven
-
+          distribution: temurin
       - name: Restaurar-test-and-dependencias
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: resultados-pruebas-unitarias
-          path: target/          
-
-      - name: Generar JAR
-        run: mvn -B clean package -DskipTests
-
+          path: target/
+      - name: Empaquetar codigo
+        run: mvn -B package -DskipTests
       - name: compartir compilacion y empaquetado
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: package-generate-artifact
           path: target/
           retention-days: 1
-
-      - name: Subir únicamente el JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: gestiontareas-jar
-          path: target/gestiontareas-0.0.2-SNAPSHOT.jar
-          if-no-files-found: error
-
-  publish-nexus:
-    name: Publicar JAR en Nexus
+  
+  public-nexus:
+    name: Publicar en Nexus
     needs: package
-    if: github.event_name == 'push'
     runs-on: [self-hosted, nexus]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Clone repo workspace actions
+        uses: actions/checkout@v7
 
-      - name: Configurar Java 21
+      - name: download actions java
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
           java-version: '21'
-          cache: maven
-
-      - name: Descargar JAR generado
-        uses: actions/download-artifact@v4
+          distribution: temurin
+          
+      - name: Restaurar binario compilado en build
+        uses: actions/download-artifact@v7
         with:
-          name: gestiontareas-jar
-          path: target
-
+          name: package-generate-artifact
+          path: target/
       - name: Extraer Parametros de Jar
         id: extraer_parametros
         run: |
@@ -162,3 +142,7 @@ jobs:
             -F "maven2.asset1=@${JAR_FILE}" \
             -F "maven2.asset1.extension=jar" \
             "${{ vars.NEXUS_URL }}/service/rest/v1/components?repository=${{ steps.determinar_destino.outputs.destino }}"
+               
+
+
+
