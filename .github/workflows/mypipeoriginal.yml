@@ -173,3 +173,47 @@ jobs:
           docker push "${DOCKERHUB_IMAGE}:develop"
           docker push "${DOCKERHUB_IMAGE}:0.0.2-SNAPSHOT"
           docker push "${DOCKERHUB_IMAGE}:sha-${GITHUB_SHA}"
+
+  deploy-kubernetes:
+    name: Desplegar en Kubernetes
+    needs: docker-build-push
+    if: github.event_name == 'push'
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verificar acceso al cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Aplicar namespaces
+        run: kubectl apply -f k8s/00-namespaces.yml
+
+      - name: Aplicar recursos de MySQL
+        run: |
+          kubectl apply -f k8s/10-mysql-secret.yml
+          kubectl apply -f k8s/11-mysql-pvc.yml
+          kubectl apply -f k8s/12-mysql-statefulset.yml
+          kubectl apply -f k8s/13-mysql-service.yml
+
+      - name: Esperar a que MySQL esté Ready
+        run: kubectl wait --for=condition=ready pod/mysql-0 -n databases --timeout=180s
+
+      - name: Aplicar recursos de Spring Boot
+        run: |
+          kubectl apply -f k8s/20-app-configmap.yml
+          kubectl apply -f k8s/21-app-secret.yml
+          kubectl apply -f k8s/22-app-deployment.yml
+          kubectl apply -f k8s/23-app-service.yml
+
+      - name: Esperar a que Spring Boot esté disponible
+        run: kubectl rollout status deployment/gestiontareas -n gestiontareas-dev --timeout=180s
+
+      - name: Mostrar estado final del cluster
+        run: |
+          kubectl get pods -A
+          kubectl get svc -A
+          kubectl get pvc -A
